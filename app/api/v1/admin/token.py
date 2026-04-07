@@ -432,3 +432,18 @@ async def enable_nsfw_async(data: dict):
         "task_id": task.id,
         "total": len(unique_tokens),
     }
+
+
+# ------------------------------------------------------------------
+# Token 最后一次请求记录
+# ------------------------------------------------------------------
+
+@router.get("/tokens/{token}/last-request", dependencies=[Depends(verify_app_key)])
+async def get_last_request(token: str):
+    """获取 Token 最后一次 HTTP 请求记录（纯内存，重启丢失）。"""
+    from app.services.grok.utils.request_log import get as get_request_log
+
+    data = get_request_log(token)
+    if not data:
+        return {"status": "empty", "message": "No request recorded for this token"}
+    return {"status": "success", "data": data}

@@ -308,6 +308,24 @@
     </div>
   </div>
 
+  <!-- Request Log Modal -->
+  <div id="request-log-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:720px;">
+      <div class="modal-header">
+        <h3 class="modal-title">最后一次请求记录</h3>
+        <button onclick="closeModal('request-log-modal')" class="modal-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div id="request-log-body" class="space-y-3" style="max-height:60vh;overflow-y:auto;">
+        <p class="text-sm text-[var(--accents-4)]">加载中...</p>
+      </div>
+    </div>
+  </div>
+
   <div id="confirm-dialog" class="modal-overlay confirm-dialog hidden">
     <div class="modal-content modal-md">
       <div class="confirm-dialog-body">

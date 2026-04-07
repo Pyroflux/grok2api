@@ -364,6 +364,9 @@ function renderTable() {
                      <button onclick="deleteToken(${originalIndex})" class="p-1 text-gray-400 hover:text-red-600 rounded" title="${t('common.delete')}">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                      </button>
+                     <button onclick="viewLastRequest('${item.token}')" class="p-1 text-gray-400 hover:text-blue-600 rounded" title="查看最后请求">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                     </button>
                 </div>
              `;
 
@@ -1358,5 +1361,55 @@ async function batchEnableNSFW() {
 }
 
 
+// ------------------------------------------------------------------
+// 查看 Token 最后一次请求记录
+// ------------------------------------------------------------------
+
+async function viewLastRequest(token) {
+  const body = byId('request-log-body');
+  body.innerHTML = '<p class="text-sm text-[var(--accents-4)]">加载中...</p>';
+  openModal('request-log-modal');
+
+  try {
+    const encodedToken = encodeURIComponent(token);
+    const res = await fetch(`/v1/admin/tokens/${encodedToken}/last-request`, {
+      headers: buildAuthHeaders(apiKey)
+    });
+    const json = await res.json();
+
+    if (json.status === 'empty') {
+      body.innerHTML = '<p class="text-sm text-[var(--accents-4)]">该 Token 暂无请求记录（服务重启后记录会清空）。</p>';
+      return;
+    }
+
+    const d = json.data;
+    const section = (title, content) =>
+      `<div class="mb-3">
+        <div class="text-xs font-semibold text-[var(--accents-5)] mb-1">${title}</div>
+        <pre class="text-xs bg-[var(--bg)] border border-[var(--border)] rounded p-3 overflow-x-auto whitespace-pre-wrap break-all" style="max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre>
+      </div>`;
+
+    const fmtHeaders = (h) => Object.entries(h || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+    const fmtBody = (b) => typeof b === 'object' ? JSON.stringify(b, null, 2) : String(b || '');
+
+    body.innerHTML =
+      `<div class="flex items-center gap-3 mb-3">
+        <span class="text-xs px-2 py-0.5 rounded font-mono font-semibold ${d.status_code === 200 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${d.status_code}</span>
+        <span class="text-xs text-[var(--accents-4)]">${d.timestamp}</span>
+        <span class="text-xs font-mono text-[var(--accents-5)]">${d.method} ${d.url}</span>
+      </div>` +
+      section('请求头 (Request Headers)', fmtHeaders(d.request_headers)) +
+      section('请求体 (Request Body)', fmtBody(d.request_body)) +
+      section('响应头 (Response Headers)', fmtHeaders(d.response_headers)) +
+      section('响应体 (Response Body)', fmtBody(d.response_body));
+  } catch (e) {
+    body.innerHTML = `<p class="text-sm text-red-500">加载失败: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 window.onload = init;

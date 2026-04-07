@@ -15,6 +15,7 @@ from app.core.exceptions import UpstreamException
 from app.services.token.service import TokenService
 from app.services.reverse.utils.headers import build_headers
 from app.services.reverse.utils.retry import extract_status_for_retry, retry_on_status
+from app.services.grok.utils.request_log import record as record_request_log
 
 CHAT_API = "https://grok.com/rest/app-chat/conversations/new"
 _LAST_PROXY_LOG_STATE: tuple[str, str] | None = None
@@ -298,9 +299,22 @@ class AppChatReverse:
                     impersonate=browser,
                 )
 
+                _resp_headers = dict(response.headers) if response.headers else {}
+
                 if response.status_code != 200:
                     content = await AppChatReverse._read_error_body(response)
                     content_type = str(response.headers.get("content-type", ""))
+
+                    record_request_log(
+                        token,
+                        url=CHAT_API,
+                        method="POST",
+                        request_headers=headers,
+                        request_body=payload,
+                        status_code=response.status_code,
+                        response_headers=_resp_headers,
+                        response_body=content,
+                    )
 
                     logger.error(
                         "AppChatReverse: Chat failed, %s, content_type=%s, body=%s",
@@ -313,6 +327,17 @@ class AppChatReverse:
                         message=f"AppChatReverse: Chat failed, {response.status_code}",
                         details={"status": response.status_code, "body": content},
                     )
+
+                record_request_log(
+                    token,
+                    url=CHAT_API,
+                    method="POST",
+                    request_headers=headers,
+                    request_body=payload,
+                    status_code=200,
+                    response_headers=_resp_headers,
+                    response_body="[streaming]",
+                )
 
                 return response
 
