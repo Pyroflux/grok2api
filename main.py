@@ -72,7 +72,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Platform: {platform.system()} {platform.release()}")
     logger.info(f"Python: {sys.version.split()[0]}")
 
-    # 4. 启动 Token 刷新调度器
+    # 4. 从 import.jsonl 导入 Token（去重，仅导入新增）
+    from app.services.token.importer import import_tokens_from_file
+    await import_tokens_from_file()
+
+    # 5. 启动 Token 刷新调度器
     refresh_enabled = get_config("token.auto_refresh", True)
     if refresh_enabled:
         basic_interval = get_config("token.refresh_interval_hours", 8)
@@ -81,7 +85,7 @@ async def lifespan(app: FastAPI):
         scheduler = get_scheduler(interval)
         scheduler.start()
 
-    # 5. 启动 cf_clearance 自动刷新
+    # 6. 启动 cf_clearance 自动刷新
     #    环境变量 FLARESOLVERR_URL 会作为初始值写入配置（兼容旧部署方式）
     _flaresolverr_env = os.getenv("FLARESOLVERR_URL", "")
     if _flaresolverr_env and not get_config("proxy.flaresolverr_url"):
